@@ -1,0 +1,4 @@
+# Private site-specific inputs and runtime output
+/mme.yaml
+/mme.log
+/scenario.env

@@ -19,10 +19,19 @@
 
 #include "ogs-sctp.h"
 #include "ogs-app.h"
+#include "lab-scenario.h"
 
 int app_initialize(const char *const argv[])
 {
     int rv;
+    fbs_lab_mode_t mode = fbs_lab_mode();
+
+    if (mode == FBS_LAB_INVALID) {
+        ogs_error("[FBS] Invalid FBS_LAB_MODE; expected normal, attach_reject, tau_reject, or service_reject");
+        return OGS_ERROR;
+    }
+    ogs_info("[FBS] mode=%s; observe-only (no NAS reject override)",
+            fbs_lab_mode_name(mode));
 
     ogs_sctp_init(ogs_app()->usrsctp.udp_port);
     rv = mme_initialize();

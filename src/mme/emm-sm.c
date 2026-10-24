@@ -34,6 +34,7 @@
 #include "mme-gtp-path.h"
 #include "mme-path.h"
 #include "mme-sm.h"
+#include "lab-scenario.h"
 
 #undef OGS_LOG_DOMAIN
 #define OGS_LOG_DOMAIN __emm_log_domain
@@ -352,6 +353,8 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
         if (message->emm.h.security_header_type
                 == OGS_NAS_SECURITY_HEADER_FOR_SERVICE_REQUEST_MESSAGE) {
             ogs_info("[%s] Service request", mme_ue->imsi_bcd);
+            if (fbs_lab_mode() == FBS_LAB_SERVICE_REJECT)
+                ogs_info("[FBS] observed=ServiceRequest; observe-only");
 
             if (state != EMM_COMMON_STATE_REGISTERED) {
                 ogs_info("Service request : Not registered[%s]",
@@ -462,6 +465,8 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 
         case OGS_NAS_EPS_ATTACH_REQUEST:
             ogs_info("[%s] Attach request", mme_ue->imsi_bcd);
+            if (fbs_lab_mode() == FBS_LAB_ATTACH_REJECT)
+                ogs_info("[FBS] observed=AttachRequest; observe-only");
             rv = emm_handle_attach_request(
                     enb_ue, mme_ue, &message->emm.attach_request, e->pkbuf);
             if (rv != OGS_OK) {
@@ -519,6 +524,8 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 
         case OGS_NAS_EPS_TRACKING_AREA_UPDATE_REQUEST:
             ogs_info("[%s] Tracking area update request", mme_ue->imsi_bcd);
+            if (fbs_lab_mode() == FBS_LAB_TAU_REJECT)
+                ogs_info("[FBS] observed=TAURequest; observe-only");
             rv = emm_handle_tau_request(enb_ue, mme_ue,
                     &message->emm.tracking_area_update_request, e->pkbuf);
             if (rv != OGS_OK) {
