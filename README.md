@@ -1,12 +1,47 @@
-<p align="center"><a href="https://open5gs.org" target="_blank" rel="noopener noreferrer"><img width="100" src="https://open5gs.org/assets/img/open5gs-logo-only.png" alt="Open5GS logo"></a></p>
+<p align="center">
+  <a href="https://open5gs.org" target="_blank" rel="noopener noreferrer">
+    <img width="100" src="https://open5gs.org/assets/img/open5gs-logo-only.png" alt="Open5GS logo">
+  </a>
+</p>
 
-## Getting Started
+# Open5GS – Graduation Thesis Fork
 
-Please follow the [documentation](https://open5gs.org/open5gs/docs/) at [open5gs.org](https://open5gs.org/)!
+> **Notice:** This repository is a fork of the official [Open5GS](https://github.com/open5gs/open5gs) project, created for academic research, testbed deployment, and feature evaluation as part of our **Graduation Thesis (Đồ án Tốt nghiệp)**.
 
-## Sponsors
+---
 
-If you find Open5GS useful for work, please consider supporting this Open Source project by [Becoming a sponsor](https://github.com/sponsors/acetcom). To manage the funding transactions transparently, you can donate through [OpenCollective](https://opencollective.com/open5gs).
+## 📌 Project Overview & Research Scope
+
+This repository is maintained by our thesis group to carry out experiments, integration tests, and scenario simulations using the Open5GS 5G Core architecture.
+
+### Key Objectives
+* **Deployment & Setup:** Build and run local 5G Core and 4G EPC network testbeds.
+* **Scenario Testing:** Simulate core network scenarios, signaling flows, and test cases (e.g., test cases under `case-*` branches).
+* **Performance Analysis:** Evaluate network function behavior, latency, throughput, and stability under simulated conditions.
+* **Custom Modifications:** Implement and test experimental code changes or configuration variations required for thesis verification.
+
+---
+
+## 👥 Credits & Acknowledgments
+
+We would like to express our deep gratitude to the original creators and maintainers of **Open5GS** for developing and making available an exceptional open-source 5G Core ecosystem.
+
+* **Original Repository:** [open5gs/open5gs](https://github.com/open5gs/open5gs)
+* **Official Website:** [open5gs.org](https://open5gs.org)
+* **Lead Maintainer & Author:** [Sukchan Lee (acetcom)](https://github.com/acetcom) and contributors.
+
+---
+
+## 🚀 Getting Started
+
+To get started with Open5GS setup, configuration, and build instructions, please refer to the official documentation:
+* **Documentation:** [open5gs.org/open5gs/docs/](https://open5gs.org/open5gs/docs/)
+
+---
+
+## 💖 Sponsors (Original Project)
+
+If you find Open5GS useful, please consider supporting the official open-source project by [Becoming a sponsor](https://github.com/sponsors/acetcom). Transparent funding transactions are managed through [OpenCollective](https://opencollective.com/open5gs).
 
 <p align="center">
   <a target="_blank" href="https://open5gs.org/#sponsors">
@@ -14,21 +49,19 @@ If you find Open5GS useful for work, please consider supporting this Open Source
   </a>
 </p>
 
-## Community
+---
 
-- Problem with Open5GS can be filed as [issues](https://github.com/open5gs/open5gs/issues) in this repository.
-- Other topics related to this project are happening on the [discussions](https://github.com/open5gs/open5gs/discussions).
-- Voice and text chat are available in Open5GS's [Discord](https://discordapp.com/) workspace. Use [this link](https://discord.gg/GreNkuc) to get started.
+## 💬 Community & Links (Original Project)
 
-## Contributing
+* **Official Issues:** Report upstream bugs at [open5gs/issues](https://github.com/open5gs/open5gs/issues).
+* **Discussions:** Join community discussions at [open5gs/discussions](https://github.com/open5gs/open5gs/discussions).
+* **Discord Chat:** Join the Open5GS [Discord Workspace](https://discord.gg/GreNkuc) for real-time chat.
 
-If you're contributing through a pull request to Open5GS project on GitHub, please read the [Contributor License Agreement](https://open5gs.org/open5gs/cla/) in advance.
+---
 
-## License
+## 📜 Contributing & License
 
-- Open5GS Open Source files are made available under the terms of the GNU Affero General Public License ([GNU AGPL v3.0](https://www.gnu.org/licenses/agpl-3.0.html)).
-- [Commercial licenses](https://open5gs.org/open5gs/support/) are also available from [NewPlane](https://newplane.io/) at [sales@newplane.io](mailto:sales@newplane.io).
-
-## Support
-
-Technical support and customized services for Open5GS are provided by [NewPlane](https://newplane.io/) at [support@newplane.io](mailto:support@newplane.io).
+* **Contributing:** If you plan to contribute directly to the upstream Open5GS project, please review their [Contributor License Agreement (CLA)](https://open5gs.org/open5gs/cla/) in advance.
+* **License:** 
+  * Open5GS source files are licensed under the terms of the **GNU Affero General Public License** ([GNU AGPL v3.0](https://www.gnu.org/licenses/agpl-3.0.html)).
+  * Commercial licenses and technical support are offered by [NewPlane](https://newplane.io/) via [sales@newplane.io](mailto:sales@newplane.io).
