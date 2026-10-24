@@ -4,37 +4,37 @@
   </a>
 </p>
 
-# Open5GS – Graduation Thesis Fork
+# Open5GS – 5G/4G Security Research & Graduation Thesis Fork
 
-> **Notice:** This repository is a fork of the official [Open5GS](https://github.com/open5gs/open5gs) project, created for academic research, testbed deployment, and feature evaluation as part of our **Graduation Thesis (Đồ án Tốt nghiệp)**.
+> **Notice:** This repository is a fork of the official [Open5GS](https://github.com/open5gs/open5gs) project, created for academic research, security evaluation, and vulnerability analysis as part of our **Graduation Thesis (Đồ án Tốt nghiệp)** on **5G/4G Core Network Security**.
 
 ---
 
-## 📌 Project Overview & Research Scope
+## 📌 Research Scope & Security Focus
 
-This repository is maintained by our thesis group to carry out experiments, integration tests, and scenario simulations using the Open5GS 5G Core architecture.
+This repository is maintained by our research team to investigate, test, and analyze security mechanisms and potential vulnerabilities within 5G Core (5GC) and 4G EPC network architectures using Open5GS.
 
-### Key Objectives
-* **Deployment & Setup:** Build and run local 5G Core and 4G EPC network testbeds.
-* **Scenario Testing:** Simulate core network scenarios, signaling flows, and test cases (e.g., test cases under `case-*` branches).
-* **Performance Analysis:** Evaluate network function behavior, latency, throughput, and stability under simulated conditions.
-* **Custom Modifications:** Implement and test experimental code changes or configuration variations required for thesis verification.
+### Key Objectives & Security Focus
+* **Vulnerability & Attack Vector Analysis:** Simulating and analyzing potential attack vectors targeting core network functions (AMF, SMF, UPF, MME, HSS/UDM, etc.).
+* **Security Testing & Verification:** Executing specific security test cases (e.g., protocol validation, authentication flows, fuzzing, and rogue signaling tests across dedicated branches like `case-*`).
+* **Authentication & Protocol Security:** Evaluating AKA (Authentication and Key Agreement) flows, NAS signaling protection, SBI (Service-Based Interface) security, and encryption/integrity algorithms.
+* **Countermeasure Development:** Implementing experimental patches, custom configurations, or security enhancements to mitigate identified core network vulnerabilities.
 
 ---
 
 ## 👥 Credits & Acknowledgments
 
-We would like to express our deep gratitude to the original creators and maintainers of **Open5GS** for developing and making available an exceptional open-source 5G Core ecosystem.
+We would like to express our gratitude to the original creators and maintainers of **Open5GS** for providing an open, robust 5G/4G Core platform that enables deep security research.
 
 * **Original Repository:** [open5gs/open5gs](https://github.com/open5gs/open5gs)
 * **Official Website:** [open5gs.org](https://open5gs.org)
-* **Lead Maintainer & Author:** [Sukchan Lee (acetcom)](https://github.com/acetcom) and contributors.
+* **Lead Maintainer & Author:** [Sukchan Lee (acetcom)](https://github.com/acetcom) and community contributors.
 
 ---
 
 ## 🚀 Getting Started
 
-To get started with Open5GS setup, configuration, and build instructions, please refer to the official documentation:
+To learn more about Open5GS installation, core components, and architecture, refer to the official documentation:
 * **Documentation:** [open5gs.org/open5gs/docs/](https://open5gs.org/open5gs/docs/)
 
 ---
