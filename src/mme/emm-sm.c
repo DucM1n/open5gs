@@ -353,8 +353,6 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
         if (message->emm.h.security_header_type
                 == OGS_NAS_SECURITY_HEADER_FOR_SERVICE_REQUEST_MESSAGE) {
             ogs_info("[%s] Service request", mme_ue->imsi_bcd);
-            if (fbs_lab_mode() == FBS_LAB_SERVICE_REJECT)
-                ogs_info("[FBS] observed=ServiceRequest; observe-only");
 
             if (state != EMM_COMMON_STATE_REGISTERED) {
                 ogs_info("Service request : Not registered[%s]",
@@ -414,7 +412,24 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
                 MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
                 break;
             }
+            if (state == EMM_COMMON_STATE_REGISTERED &&
+                fbs_lab_mode() == FBS_LAB_SERVICE_REJECT &&
+                MME_UE_HAVE_IMSI(mme_ue) &&
+                SECURITY_CONTEXT_IS_VALID(mme_ue) &&
+                fbs_lab_target_matches(mme_ue->imsi_bcd)) {
 
+                ogs_warn("[FBS] Service Reject test: EMM cause=7");
+
+                r = nas_eps_send_service_reject(
+                        enb_ue, mme_ue,
+                        OGS_NAS_EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED);
+
+                ogs_expect(r == OGS_OK);
+                ogs_assert(r != OGS_ERROR);
+
+                MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
+                break;
+            }
             /*
              * If the OLD ENB_UE is being maintained in MME-UE Context,
              * it deletes the S1 Context after exchanging
