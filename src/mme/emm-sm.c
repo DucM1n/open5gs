@@ -478,7 +478,7 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
             if (state == EMM_COMMON_STATE_DEREGISTERED &&
                 fbs_lab_mode() == FBS_LAB_ATTACH_REJECT &&
                 MME_UE_HAVE_IMSI(mme_ue) &&
-                fbs_lab_attach_target_matches(mme_ue->imsi_bcd)) {
+                fbs_lab_target_matches(mme_ue->imsi_bcd)) {
 
                 ogs_warn("[FBS] Attach Reject test: EMM cause=14");
 
@@ -543,8 +543,6 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 
         case OGS_NAS_EPS_TRACKING_AREA_UPDATE_REQUEST:
             ogs_info("[%s] Tracking area update request", mme_ue->imsi_bcd);
-            if (fbs_lab_mode() == FBS_LAB_TAU_REJECT)
-                ogs_info("[FBS] observed=TAURequest; observe-only");
             rv = emm_handle_tau_request(enb_ue, mme_ue,
                     &message->emm.tracking_area_update_request, e->pkbuf);
             if (rv != OGS_OK) {
@@ -552,7 +550,25 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
                 MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
                 break;
             }
+            if (state == EMM_COMMON_STATE_REGISTERED &&
+                fbs_lab_mode() == FBS_LAB_TAU_REJECT &&
+                MME_UE_HAVE_IMSI(mme_ue) &&
+                h.integrity_protected &&
+                SECURITY_CONTEXT_IS_VALID(mme_ue) &&
+                fbs_lab_target_matches(mme_ue->imsi_bcd)) {
 
+                ogs_warn("[FBS] TAU Reject test: EMM cause=15");
+
+                r = nas_eps_send_tau_reject(
+                        enb_ue, mme_ue,
+                        OGS_NAS_EMM_CAUSE_NO_SUITABLE_CELLS_IN_TRACKING_AREA);
+
+                ogs_expect(r == OGS_OK);
+                ogs_assert(r != OGS_ERROR);
+
+                MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
+                break;
+            }
             if (emm_tau_request_ue_comes_from_gb_or_iu(&message->emm.tracking_area_update_request)) {
                 ogs_info("TAU request : UE comes from SGSN, attempt retrieving context");
                 guti_to_rai_ptmsi(&mme_ue->next.guti, &rai, NULL);

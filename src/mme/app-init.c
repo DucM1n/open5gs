@@ -44,9 +44,9 @@ int app_initialize(const char *const argv[])
     }
 
     /* Open5GS logging is now initialized */
-    ogs_info("[FBS] mode=%s; Attach Reject target-guarded; "
-         "TAU/Service observe-only",
-         fbs_lab_mode_name(mode));
+    ogs_info("[FBS] mode=%s; Attach/TAU Reject guarded; "
+            "Service observe-only",
+            fbs_lab_mode_name(mode));
 
     ogs_info("MME initialize...done");
 

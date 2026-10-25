@@ -39,7 +39,7 @@ static inline const char *fbs_lab_mode_name(fbs_lab_mode_t mode)
     }
 }
 
-static inline int fbs_lab_attach_target_matches(const char *imsi)
+static inline int fbs_lab_target_matches(const char *imsi)
 {
     const char *enabled = getenv("FBS_LAB_REJECT_ENABLED");
     const char *target = getenv("FBS_LAB_TARGET_IMSI");
