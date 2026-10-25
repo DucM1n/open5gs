@@ -39,4 +39,18 @@ static inline const char *fbs_lab_mode_name(fbs_lab_mode_t mode)
     }
 }
 
+static inline int fbs_lab_attach_target_matches(const char *imsi)
+{
+    const char *enabled = getenv("FBS_LAB_REJECT_ENABLED");
+    const char *target = getenv("FBS_LAB_TARGET_IMSI");
+
+    if (!enabled || strcmp(enabled, "1") != 0)
+        return 0;
+
+    if (!imsi || !target || strlen(target) != 15)
+        return 0;
+
+    return strcmp(imsi, target) == 0;
+}
+
 #endif /* FBS_LAB_SCENARIO_H */

@@ -465,12 +465,31 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 
         case OGS_NAS_EPS_ATTACH_REQUEST:
             ogs_info("[%s] Attach request", mme_ue->imsi_bcd);
-            if (fbs_lab_mode() == FBS_LAB_ATTACH_REJECT)
-                ogs_info("[FBS] observed=AttachRequest; observe-only");
+
             rv = emm_handle_attach_request(
                     enb_ue, mme_ue, &message->emm.attach_request, e->pkbuf);
+
             if (rv != OGS_OK) {
                 ogs_error("emm_handle_attach_request() failed");
+                MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
+                break;
+            }
+
+            if (state == EMM_COMMON_STATE_DEREGISTERED &&
+                fbs_lab_mode() == FBS_LAB_ATTACH_REJECT &&
+                MME_UE_HAVE_IMSI(mme_ue) &&
+                fbs_lab_attach_target_matches(mme_ue->imsi_bcd)) {
+
+                ogs_warn("[FBS] Attach Reject test: EMM cause=14");
+
+                r = nas_eps_send_attach_reject(
+                        enb_ue, mme_ue,
+                        OGS_NAS_EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED_IN_THIS_PLMN,
+                        OGS_NAS_ESM_CAUSE_PROTOCOL_ERROR_UNSPECIFIED);
+
+                ogs_expect(r == OGS_OK);
+                ogs_assert(r != OGS_ERROR);
+
                 MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
                 break;
             }
