@@ -382,6 +382,7 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
             //     break;
             // }
 
+#if 0 /* MSA#8 disabled while testing MSA#20. */
 // MSA#8: Service Reject
             if (state != EMM_COMMON_STATE_REGISTERED) {
                 ogs_info("[MSA-8] Service request from unregistered UE -> Sending Service Reject cause 9");
@@ -400,6 +401,7 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
                 break;
             }
 // END OF MSA#8
+#endif
 
             rv = emm_handle_service_request(
                     enb_ue, mme_ue, &message->emm.service_request);
@@ -740,17 +742,23 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 // END OF MSA#14
 
 // MSA#20: TAU Reject
-            // if (!MME_UE_HAVE_IMSI(mme_ue)) {
-            //     ogs_info("TAU request : Unknown UE");
-            //     ogs_info("[MSA-20] Sending TAU Reject with Cause #7 (EPS services not allowed)");
-            //     r = nas_eps_send_tau_reject(enb_ue, mme_ue,
-            //         OGS_NAS_EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED); // Cause #7 (use OGS_NAS_EMM_CAUSE_NO_SUITABLE_CELLS_IN_TRACKING_AREA for Cause #15)
-            //     ogs_expect(r == OGS_OK);
-            //     ogs_assert(r != OGS_ERROR);
-            //     MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
-            //     break;
-            // }
- // END OF MSA#20
+            if (!MME_UE_HAVE_IMSI(mme_ue)) {
+                ogs_info("[MSA-20] Unknown UE TAU -> Sending TAU Reject cause 11 (PLMN not allowed)");
+                r = nas_eps_send_tau_reject(enb_ue, mme_ue,
+                        OGS_NAS_EMM_CAUSE_PLMN_NOT_ALLOWED);
+                ogs_expect(r == OGS_OK);
+                ogs_assert(r != OGS_ERROR);
+                /* Send NAS immediately; preserve queued SRB data before S1 release. */
+                OGS_FSM_TRAN(s, &emm_state_de_registered);
+                r = s1ap_send_ue_context_release_command(enb_ue,
+                        S1AP_Cause_PR_nas, S1AP_CauseNas_normal_release,
+                        S1AP_UE_CTX_REL_UE_CONTEXT_REMOVE, ogs_time_from_sec(1));
+                ogs_expect(r == OGS_OK);
+                ogs_assert(r != OGS_ERROR);
+                ogs_info("[MSA-20] TAU Reject cause 11 queued; S1 release delayed 1 second");
+                break;
+            }
+// END OF MSA#20
 
             if (!SESSION_CONTEXT_IS_AVAILABLE(mme_ue)) {
                 ogs_warn("No PDN Connection : UE[%s]", mme_ue->imsi_bcd);
