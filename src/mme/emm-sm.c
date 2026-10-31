@@ -46,6 +46,21 @@ typedef enum {
 static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
         emm_common_state_e state);
 
+/* Explicit opt-in for the isolated software-UE protocol test. */
+static bool lab_zmq_identity_roundtrip(void)
+{
+    const char *enabled = ogs_env_get("OPEN5GS_ZMQ_IDENTITY_ROUNDTRIP");
+    return enabled && strcmp(enabled, "1") == 0;
+}
+
+/* Separate opt-in for the first-Attach software-UE test. */
+static bool lab_zmq_reject_first_attach(void)
+{
+    const char *enabled = ogs_env_get("OPEN5GS_ZMQ_REJECT_FIRST_ATTACH");
+    return !lab_zmq_identity_roundtrip() &&
+        enabled && strcmp(enabled, "1") == 0;
+}
+
 void emm_state_initial(ogs_fsm_t *s, mme_event_t *e)
 {
     ogs_assert(s);
@@ -484,9 +499,35 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 //             break;
 // END OF MSA#15
 
+            /* No-HSS diagnostics: never enter authentication without a vector.
+             * Identity handling above is the normal protocol path.
+             */
             // mme_s6a_send_air(enb_ue, mme_ue, NULL);
-
-            OGS_FSM_TRAN(s, &emm_state_authentication);
+            // OGS_FSM_TRAN(s, &emm_state_authentication);
+            ogs_warn("[LAB-NO-HSS] Identity response processed; authentication unavailable");
+            r = nas_eps_send_attach_reject(enb_ue, mme_ue,
+                    lab_zmq_identity_roundtrip() ?
+                        OGS_NAS_EMM_CAUSE_NO_SUITABLE_CELLS_IN_TRACKING_AREA :
+                        OGS_NAS_EMM_CAUSE_NETWORK_FAILURE,
+                    OGS_NAS_ESM_CAUSE_PROTOCOL_ERROR_UNSPECIFIED);
+            ogs_expect(r == OGS_OK);
+            ogs_assert(r != OGS_ERROR);
+            if (lab_zmq_identity_roundtrip() &&
+                    state == EMM_COMMON_STATE_DEREGISTERED &&
+                    !mme_ue->can_restore_context) {
+                /* The test eNB clears queued SRB data on immediate S1 release.
+                 * Use the existing nonblocking timer so NAS Reject can arrive first.
+                 */
+                OGS_FSM_TRAN(s, &emm_state_de_registered);
+                r = s1ap_send_ue_context_release_command(enb_ue,
+                        S1AP_Cause_PR_nas, S1AP_CauseNas_normal_release,
+                        S1AP_UE_CTX_REL_UE_CONTEXT_REMOVE, ogs_time_from_sec(1));
+                ogs_expect(r == OGS_OK);
+                ogs_assert(r != OGS_ERROR);
+                ogs_info("[LAB-ZMQ] Reject cause 15 queued; S1 release delayed 1 second");
+            } else {
+                MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
+            }
             break;
 
         case OGS_NAS_EPS_ATTACH_REQUEST:
@@ -499,7 +540,11 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
                 break;
             }
 
-            if (!MME_UE_HAVE_IMSI(mme_ue)) {
+            if (!MME_UE_HAVE_IMSI(mme_ue) ||
+                    (state == EMM_COMMON_STATE_DEREGISTERED &&
+                     lab_zmq_identity_roundtrip())) {
+                if (MME_UE_HAVE_IMSI(mme_ue))
+                    ogs_info("[LAB-ZMQ] Testing identity roundtrip with IMSI already available");
                 CLEAR_MME_UE_TIMER(mme_ue->t3470);
                 r = nas_eps_send_identity_request(mme_ue);
                 ogs_expect(r == OGS_OK);
@@ -545,6 +590,34 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 
             // }
             } else {
+                /* IMSI already available: no additional identity query is needed.
+                 * HSS/AIR remains disabled in this diagnostic branch.
+                 */
+                bool reject_first_attach = lab_zmq_reject_first_attach() &&
+                    state == EMM_COMMON_STATE_DEREGISTERED &&
+                    !mme_ue->can_restore_context;
+                ogs_warn("[LAB-NO-HSS] Attach processed; authentication unavailable");
+                r = nas_eps_send_attach_reject(enb_ue, mme_ue,
+                        reject_first_attach ?
+                            OGS_NAS_EMM_CAUSE_NO_SUITABLE_CELLS_IN_TRACKING_AREA :
+                            OGS_NAS_EMM_CAUSE_NETWORK_FAILURE,
+                        OGS_NAS_ESM_CAUSE_PROTOCOL_ERROR_UNSPECIFIED);
+                ogs_expect(r == OGS_OK);
+                ogs_assert(r != OGS_ERROR);
+                if (reject_first_attach) {
+                    /* Queue NAS immediately; delay only context cleanup so the
+                     * software eNB does not discard pending SRB data.
+                     */
+                    OGS_FSM_TRAN(s, &emm_state_de_registered);
+                    r = s1ap_send_ue_context_release_command(enb_ue,
+                            S1AP_Cause_PR_nas, S1AP_CauseNas_normal_release,
+                            S1AP_UE_CTX_REL_UE_CONTEXT_REMOVE, ogs_time_from_sec(1));
+                    ogs_expect(r == OGS_OK);
+                    ogs_assert(r != OGS_ERROR);
+                    ogs_info("[LAB-ZMQ] First Attach IMSI processed; Reject cause 15 queued; S1 release delayed 1 second");
+                } else {
+                    MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
+                }
 
 // MSA#15
 // // VARIANT B: Auth Request -> Auth Failure -> Auth Reject
@@ -567,6 +640,7 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
             //     break;
             // }
 // END OF MSA#2
+            }
 
             break;
 
