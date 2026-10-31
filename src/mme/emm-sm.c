@@ -484,9 +484,9 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
             }
 
 // MSA#14: IMSI CATCHING CONFIRM
-            // // PRINT IMSI TO LOG:
-            // ogs_info(">>> [MSA-14 SUCCESS] Captured IMSI: %s <<<", mme_ue->imsi_bcd);
-            // break;
+            // PRINT IMSI TO LOG:
+            ogs_info(">>> [MSA-14 SUCCESS] Captured IMSI: %s <<<", mme_ue->imsi_bcd);
+            break;
 // END OF MSA#14
 
 // MSA#15: NAS Counter Desync Attack (Auth Reject)
@@ -689,15 +689,15 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
             // }
 
 // MSA#14: IMSI CATCHING
-            // if (!MME_UE_HAVE_IMSI(mme_ue))
-            // {
-            //     ogs_info("[MSA-14] TAU request from Unknown GUTI -> Sending Identity Request (IMSI Catching)");
-            //     CLEAR_MME_UE_TIMER(mme_ue->t3470);
-            //     r = nas_eps_send_identity_request(mme_ue);
-            //     ogs_expect(r == OGS_OK);
-            //     ogs_assert(r != OGS_ERROR);
-            //     break;
-            // }
+            if (!MME_UE_HAVE_IMSI(mme_ue))
+            {
+                ogs_info("[MSA-14] TAU request from Unknown GUTI -> Sending Identity Request (IMSI Catching)");
+                CLEAR_MME_UE_TIMER(mme_ue->t3470);
+                r = nas_eps_send_identity_request(mme_ue);
+                ogs_expect(r == OGS_OK);
+                ogs_assert(r != OGS_ERROR);
+                break;
+            }
 // END OF MSA#14
 
 // MSA#20: TAU Reject
