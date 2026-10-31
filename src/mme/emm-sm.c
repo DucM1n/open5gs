@@ -53,6 +53,7 @@ static bool lab_zmq_identity_roundtrip(void)
     return enabled && strcmp(enabled, "1") == 0;
 }
 
+#if 0 /* Previous first-Attach Reject-15 testcase disabled for MSA#2. */
 /* Separate opt-in for the first-Attach software-UE test. */
 static bool lab_zmq_reject_first_attach(void)
 {
@@ -60,6 +61,8 @@ static bool lab_zmq_reject_first_attach(void)
     return !lab_zmq_identity_roundtrip() &&
         enabled && strcmp(enabled, "1") == 0;
 }
+
+#endif
 
 void emm_state_initial(ogs_fsm_t *s, mme_event_t *e)
 {
@@ -485,8 +488,8 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 
 // MSA#14: IMSI CATCHING CONFIRM
             // PRINT IMSI TO LOG:
-            ogs_info(">>> [MSA-14 SUCCESS] Captured IMSI: %s <<<", mme_ue->imsi_bcd);
-            break;
+            // ogs_info(">>> [MSA-14 SUCCESS] Captured IMSI: %s <<<", mme_ue->imsi_bcd);
+            // break;
 // END OF MSA#14
 
 // MSA#15: NAS Counter Desync Attack (Auth Reject)
@@ -499,6 +502,7 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 //             break;
 // END OF MSA#15
 
+#if 0 /* Previous Identity/Reject-17/15 diagnostics disabled for MSA#2. */
             /* No-HSS diagnostics: never enter authentication without a vector.
              * Identity handling above is the normal protocol path.
              */
@@ -530,6 +534,10 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
             }
             break;
 
+#endif
+            MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
+            break;
+
         case OGS_NAS_EPS_ATTACH_REQUEST:
             ogs_info("[%s] Attach request", mme_ue->imsi_bcd);
             rv = emm_handle_attach_request(
@@ -539,6 +547,32 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
                 MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
                 break;
             }
+
+// MSA#2: Attach Reject
+            /* Fresh-MME testcase: reject the first valid Attach before Identity
+             * or authentication, regardless of IMSI/GUTI identity encoding.
+             */
+            if (state == EMM_COMMON_STATE_DEREGISTERED &&
+                    !mme_ue->can_restore_context) {
+                ogs_info("[MSA-2] Sending Attach Reject cause 7 (EPS services not allowed)");
+                r = nas_eps_send_attach_reject(enb_ue, mme_ue,
+                        OGS_NAS_EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED,
+                        OGS_NAS_ESM_CAUSE_PROTOCOL_ERROR_UNSPECIFIED);
+                ogs_expect(r == OGS_OK);
+                ogs_assert(r != OGS_ERROR);
+                /* Queue Reject immediately. Delay only S1 cleanup to avoid
+                 * discarding the pending NAS message in the test eNB.
+                 */
+                OGS_FSM_TRAN(s, &emm_state_de_registered);
+                r = s1ap_send_ue_context_release_command(enb_ue,
+                        S1AP_Cause_PR_nas, S1AP_CauseNas_normal_release,
+                        S1AP_UE_CTX_REL_UE_CONTEXT_REMOVE, ogs_time_from_sec(1));
+                ogs_expect(r == OGS_OK);
+                ogs_assert(r != OGS_ERROR);
+                ogs_info("[MSA-2] Reject cause 7 queued; S1 release delayed 1 second");
+                break;
+            }
+// END OF MSA#2
 
             if (!MME_UE_HAVE_IMSI(mme_ue) ||
                     (state == EMM_COMMON_STATE_DEREGISTERED &&
@@ -590,6 +624,7 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 
             // }
             } else {
+#if 0 /* Previous direct Reject-17/15 diagnostics disabled for MSA#2. */
                 /* IMSI already available: no additional identity query is needed.
                  * HSS/AIR remains disabled in this diagnostic branch.
                  */
@@ -619,6 +654,10 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
                     MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
                 }
 
+#endif
+                MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
+                break;
+
 // MSA#15
 // // VARIANT B: Auth Request -> Auth Failure -> Auth Reject
 //                 ogs_info("[MSA-15-Reshaped] Sending unverified Authentication Request to IMSI[%s]", mme_ue->imsi_bcd);
@@ -630,16 +669,7 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 //                 break;
 // END OF MSA#15
 
-// MSA#2: Attach Reject
-            //     ogs_info("[MSA-2] Sending Attach Reject Cause #14 to IMSI[%s]", mme_ue->imsi_bcd);
-            //     r = nas_eps_send_attach_reject(enb_ue, mme_ue,
-            //         OGS_NAS_EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED_IN_THIS_PLMN, // Cause #14 (or OGS_NAS_EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED for Cause #7)
-            //         OGS_NAS_ESM_CAUSE_PROTOCOL_ERROR_UNSPECIFIED);
-            //     ogs_expect(r == OGS_OK);
-            //     MME_RESTORE_CONTEXT_ON_FAILURE(mme_ue, s);
-            //     break;
-            // }
-// END OF MSA#2
+// MSA#2 is evaluated before Identity/authentication in Attach handling above.
             }
 
             break;
@@ -689,15 +719,15 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
             // }
 
 // MSA#14: IMSI CATCHING
-            if (!MME_UE_HAVE_IMSI(mme_ue))
-            {
-                ogs_info("[MSA-14] TAU request from Unknown GUTI -> Sending Identity Request (IMSI Catching)");
-                CLEAR_MME_UE_TIMER(mme_ue->t3470);
-                r = nas_eps_send_identity_request(mme_ue);
-                ogs_expect(r == OGS_OK);
-                ogs_assert(r != OGS_ERROR);
-                break;
-            }
+            // if (!MME_UE_HAVE_IMSI(mme_ue))
+            // {
+                // ogs_info("[MSA-14] TAU request from Unknown GUTI -> Sending Identity Request (IMSI Catching)");
+                // CLEAR_MME_UE_TIMER(mme_ue->t3470);
+                // r = nas_eps_send_identity_request(mme_ue);
+                // ogs_expect(r == OGS_OK);
+                // ogs_assert(r != OGS_ERROR);
+                // break;
+            // }
 // END OF MSA#14
 
 // MSA#20: TAU Reject
